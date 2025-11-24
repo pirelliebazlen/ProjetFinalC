@@ -32,6 +32,7 @@
                          // S -> A    "OK" ou "KO"                  reponse en phrase pour l'administrateur
 #define NEW_PUB       18 // A -> S    nbSecondes                    texte de la pub
 
+
 typedef struct
 {
   long  type;

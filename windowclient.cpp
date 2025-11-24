@@ -1,8 +1,12 @@
 #include "windowclient.h"
 #include "ui_windowclient.h"
 #include <QMessageBox>
+#include <sys/types.h>
+ #include <sys/ipc.h>
+ #include <sys/msg.h>
 #include "dialogmodification.h"
 #include <unistd.h>
+ #include <signal.h>
 
 extern WindowClient *w;
 
@@ -23,7 +27,15 @@ WindowClient::WindowClient(QWidget *parent):QMainWindow(parent),ui(new Ui::Windo
     ::close(2);
     logoutOK();
 
+
     // Recuperation de l'identifiant de la file de messages
+     if((idQ = msgget(CLE, 0))==-1)
+    {
+      perror("Erreur msgget CLIENT");
+      exit(0);
+
+    }
+    printf("idQ=> %d\n", idQ);
     fprintf(stderr,"(CLIENT %d) Recuperation de l'id de la file de messages\n",getpid());
 
     // Recuperation de l'identifiant de la mémoire partagée
@@ -33,7 +45,28 @@ WindowClient::WindowClient(QWidget *parent):QMainWindow(parent),ui(new Ui::Windo
 
     // Armement des signaux
 
+    struct sigaction A;
+    A.sa_handler = handlerSIGUSR1;
+    A.sa_flags = 0;
+    sigemptyset(&A.sa_mask);
+    if(sigaction(SIGUSR1, &A, NULL)==-1)
+    {
+      perror("Erreur sigaction");
+      exit(0);
+    }
+   
     // Envoi d'une requete de connexion au serveur
+    MESSAGE mes;
+    mes.type = 1;
+    mes.expediteur= getpid();
+    mes.requete = 1;
+    if(msgsnd(idQ,  &mes, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd");
+      exit(1);
+    }
+
+
 }
 
 WindowClient::~WindowClient()
@@ -329,6 +362,18 @@ void WindowClient::dialogueErreur(const char* titre,const char* message)
 void WindowClient::closeEvent(QCloseEvent *event)
 {
     // TO DO
+     //Envoi une requete deconnection   "MON COMMENTAIRE"
+
+    MESSAGE mes;
+    mes.type = 1;
+    mes.expediteur= getpid();
+    mes.requete = 2;
+    if(msgsnd(idQ,  &mes, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd");
+      exit(1);
+    }
+
 
     QApplication::exit();
 }
@@ -339,18 +384,57 @@ void WindowClient::closeEvent(QCloseEvent *event)
 void WindowClient::on_pushButtonLogin_clicked()
 {
     // TO DO
+    MESSAGE mes;
+    MESSAGE rep;
+    int check;
+    mes.type = 1;
+    mes.expediteur= getpid();
+    mes.requete = 3;
+    check = isNouveauChecked();
+    mes.data1[0]= '0'+ check;
+
+    strcpy(mes.data2, getNom());
+    strcpy(mes.texte, getMotDePasse());
+    if(msgsnd(idQ,  &mes, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+        perror("Erreur msgsnd");
+        exit(1);
+    }
+    
+  
 
 }
 
 void WindowClient::on_pushButtonLogout_clicked()
 {
     // TO DO
+     MESSAGE mes;
+    mes.type = 1;
+    mes.expediteur= getpid();
+    mes.requete = 4;
+    printf("XXXXXXXXX\n");
+    if(msgsnd(idQ,  &mes, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd");
+      exit(1);
+    }
+
     logoutOK();
 }
 
 void WindowClient::on_pushButtonEnvoyer_clicked()
 {
     // TO DO
+    MESSAGE mes;
+    mes.type = 9;
+    mes.expediteur= getpid();
+    mes.requete = 1;
+    if(msgsnd(idQ,  &mes, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd");
+      exit(1);
+    }
+
 }
 
 void WindowClient::on_pushButtonConsulter_clicked()
@@ -363,13 +447,28 @@ void WindowClient::on_pushButtonModifier_clicked()
 {
   // TO DO
   // Envoi d'une requete MODIF1 au serveur
-  MESSAGE m;
+    MESSAGE m;
+    m.type = 2;
+    m.expediteur= getpid();
+    m.requete = 12;
+    if(msgsnd(idQ,  &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd");
+      exit(1);
+    }
+
   // ...
 
   // Attente d'une reponse en provenance de Modification
   fprintf(stderr,"(CLIENT %d) Attente reponse MODIF1\n",getpid());
   // ...
-
+  long type=getpid();
+  int ret;
+  if((ret=msgrcv(idQ, &m, sizeof(MESSAGE)-sizeof(long),type, 0))==-1)
+  {
+    perror("Erreur msgrcv Client");
+    exit(0);
+  }
   // Verification si la modification est possible
   if (strcmp(m.data1,"KO") == 0 && strcmp(m.data2,"KO") == 0 && strcmp(m.texte,"KO") == 0)
   {
@@ -470,8 +569,18 @@ void WindowClient::on_checkBox5_clicked(bool checked)
 void handlerSIGUSR1(int sig)
 {
     MESSAGE m;
+    int ret;
+    int type = getpid();
     
-    // ...msgrcv(idQ,&m,...)
+    if((ret= msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long), type, 0)) == -1)
+    {
+      perror("Erreur msgrcv Client");
+      exit(0);
+    }
+    else
+    {
+
+    
     
       switch(m.requete)
       {
@@ -502,4 +611,6 @@ void handlerSIGUSR1(int sig)
                   // TO DO
                   break;
       }
+
+    }
 }
