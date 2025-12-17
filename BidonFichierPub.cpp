@@ -10,7 +10,7 @@ int main()
 {
   int fd;
 
-  if ((fd = open("publicites.dat",O_CREAT | O_WRONLY, 0644)) == -1)
+  if ((fd = open("publicites.dat", O_CREAT | O_RDWR| O_EXCL, 0644)) == -1)
   {
     perror("Erreur de open");
     exit(1);

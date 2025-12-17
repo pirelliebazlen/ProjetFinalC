@@ -13,7 +13,6 @@ int estPresent(const char* nom)
   UTILISATEUR maStruct;
   int cpt =1;
   int r;
-  printf("je suis dans present\n");
   if((fd= open(FICHIER_UTILISATEURS, O_RDONLY))==-1)
   {
     printf("je n'arrive pas a ouvrir le F\n");
@@ -33,8 +32,6 @@ int estPresent(const char* nom)
         }
         
         cpt++;
-
-        printf("je suis dans la boucle %d\n", cpt);
 
       }
       if (r==-1)
@@ -74,7 +71,6 @@ int ajouteUtilisateur(const char* nom, const char* motDePasse)
   int fd;
   UTILISATEUR *util;
   int ha;
-  printf("je suis au debut AjouteUtil\n");
   if((fd=open(FICHIER_UTILISATEURS, O_WRONLY|O_APPEND|O_CREAT, 0777))==-1)
   {
     printf("Erreur");
@@ -83,7 +79,7 @@ int ajouteUtilisateur(const char* nom, const char* motDePasse)
   }
   else
   {
-    printf("je suis dans ajouteUtilisateur\n");
+
     util = (UTILISATEUR*) malloc(sizeof(UTILISATEUR));
     if(util== NULL)
     {
@@ -144,8 +140,6 @@ int listeUtilisateurs(UTILISATEUR *vecteur) // le vecteur doit etre suffisamment
   // TO DO
   int fd, cmpt=0, i=0;
   UTILISATEUR util;
-
-  printf("je suis dans listeUtilisateurs\n");
   if((fd=open(FICHIER_UTILISATEURS, O_RDONLY))==-1)
   {
     printf("j'ouvre pas \n");
@@ -156,8 +150,7 @@ int listeUtilisateurs(UTILISATEUR *vecteur) // le vecteur doit etre suffisamment
   {
     while(read(fd, &util, sizeof(UTILISATEUR))== sizeof(UTILISATEUR))
     {
-      printf("je suis ouvert je parcours\n");
-      printf("cpmpteur=>%d\n", cmpt);
+     
       cmpt++;
     }
 

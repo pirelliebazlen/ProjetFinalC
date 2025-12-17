@@ -34,7 +34,7 @@ int main(int argc,char *argv[])
   // Ajout de tuples dans la table
   /*
   printf("Ajout de 3 users la table UNIX_FINAL...\n");
-  char requete[256];
+  
   for (int i=0 ; i<3 ; i++)
   {
 	  sprintf(requete,"insert into UNIX_FINAL values (NULL,'%s','%s','%s');",Elm[i].nom,Elm[i].gsm,Elm[i].email);

@@ -47,16 +47,16 @@ Publicite:	Publicite.cpp
 			g++ -o Publicite Publicite.cpp
 
 
-FichierUtilisateur.o:	FichierUtilisateur.cpp 
+FichierUtilisateur.o:	FichierUtilisateur.cpp FichierUtilisateur.h
 						g++ -c FichierUtilisateur.cpp	
 
 Consultation:	Consultation.cpp
 				g++ Consultation.cpp -o Consultation -I/usr/include/mysql -m64 -L/usr/lib64/mysql -lmysqlclient -lpthread -lz -lm -lrt -lssl -lcrypto -ldl
 
 
-Modification:	Modification.cpp
-					g++ Modification.cpp -o Modification -I/usr/include/mysql -m64 -L/usr/lib64/mysql -lmysqlclient -lpthread -lz -lm -lrt -lssl -lcrypto -ldl
+Modification:	Modification.cpp FichierUtilisateur.o
+					g++ Modification.cpp FichierUtilisateur.o -o Modification -I/usr/include/mysql -m64 -L/usr/lib64/mysql -lmysqlclient -lpthread -lz -lm -lrt -lssl -lcrypto -ldl
 clean:	
-	rm -r *.o  Serveur Administrateur Publicite Modification Client Consultation
+	rm -r *.o  Serveur Administrateur Publicite Modification Client Consultation BidonFichierPub
 
 clobber: clean
