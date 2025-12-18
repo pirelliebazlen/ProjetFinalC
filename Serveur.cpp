@@ -12,6 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <mysql.h>
+#include <cerrno>
 #include <setjmp.h>
 #include <sys/sem.h>
 #include "protocole.h" // contient la cle et la structure d'un message
@@ -22,12 +23,12 @@ int idQ,idShm,idSem;
 TAB_CONNEXIONS *tab;
 int pid, idfils, idfils2, idfils3;
 
-/*union semun {
+union semun {
     int val;               // Pour SETVAL
     struct semid_ds *buf;  // Pour IPC_STAT, IPC_SET
     unsigned short *array; // Pour SETALL
    
-}arg;*/
+}arg;
 
 void afficheTab();
 
@@ -73,14 +74,13 @@ int main()
     struct sigaction B;
     B.sa_handler = HandlerSIGCHLD;
     sigemptyset(&B.sa_mask);
-    B.sa_flags = SA_RESTART;
+    B.sa_flags = 0;
     if (sigaction(SIGCHLD,&B,NULL) ==-1)
     {
       perror("Erreur de sigaction");
-      //exit(1);
+      exit(1);
     }
    
-
     // Creation des ressources
     fprintf(stderr,"(SERVEUR %d) Creation de la file de messages\n",getpid());
     if ((idQ = msgget(CLE,IPC_CREAT | IPC_EXCL | 0600)) == -1)  // CLE definie dans protocole.h
@@ -89,19 +89,19 @@ int main()
       exit(1);
     }
 
-    printf("idQ Dans Serveur=> %d\n", idQ);
-    /*if((idSem = semget(CLE, 1, IPC_CREAT | IPC_EXCL | 0600)) ==-1)
+    if((idSem = semget(CLE, 1, IPC_CREAT | IPC_EXCL | 0600)) ==-1)
     {
       perror("Erreur Creation Semaphore\n");
       exit(1);
     }
     printf("Semid=> %d\n", idSem);
+
     arg.val=1;
-    if(semctl(idSem, 0, SETVAL, agr)==-1)
+    if(semctl(idSem, 0, SETVAL, arg)==-1)
     {
       perror("Erreur de semctl Semaphore");
       exit(1);
-    }*/
+    }
 
     // Initialisation du tableau de connexions
     fprintf(stderr,"(SERVEUR %d) Initialisation de la table des connexions\n",getpid());
@@ -161,6 +161,7 @@ int main()
       if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),1,0) == -1)
       {
         perror("(SERVEUR) Erreur de msgrcv");
+        if (errno == EINTR) continue;   //EINTR “Interrupted system call"
         msgctl(idQ,IPC_RMID,NULL);
         shmctl(idShm,IPC_RMID, NULL);
         exit(1);
@@ -297,7 +298,7 @@ int main()
                             tab->connexions[i].pidModification=idfils3;
                             m.type=idfils3;
                             strcpy(m.data1, tab->connexions[i].nom);
-                            printf("le nom du client est %s\n", m.data1);
+                  
                             if(msgsnd(idQ, &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
                             {
                               
@@ -312,13 +313,13 @@ int main()
                         break;
 
         case MODIF2 :
-                        fprintf(stderr,"(SERVEUR %d) Requete MODIF2 reçue de %d\n",getpid(),m.expediteur);
-                         for(i=0; i < 6; i++)
-                         {
+                      fprintf(stderr,"(SERVEUR %d) Requete MODIF2 reçue de %d\n",getpid(),m.expediteur);
+                        for(i=0; i < 6; i++)
+                        {
                             if(tab->connexions[i].pidFenetre ==m.expediteur)
                             {
                                m.type=tab->connexions[i].pidModification;
-                               printf("Serveur envois MODIF2 a %d\n", tab->connexions[i].pidModification);
+                              
                                if(msgsnd(idQ, &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
                                {
                                   perror("Erreur msgsnd SERVEUR to Modification");
@@ -326,7 +327,7 @@ int main()
                                }
                                i=6;
                             } 
-                          }
+                        }
                         break;
 
         case LOGIN_ADMIN :
@@ -401,32 +402,18 @@ void HandlerSIGCHLD(int sig)
 {
   int id , status, i;
   pid_t pid;
-  /*
-  printf("HandlerSIGCHLD\n");
+  
   id = wait(&status);
-  printf("id=>%d\n", id);
   if(id==idfils3)
   {
-    printf("dans le if id %d\n", id);
+
     for(i=0; i < 6; i++)
     {
       if(tab->connexions[i].pidModification == id)
       {
         tab->connexions[i].pidModification =0;
         i=6;
-        printf("fait\n");
-      }
-    }
-  }*/
-  while((pid= waitpid(-1, NULL, WNOHANG))>0)
-  {
-    for(i=0; i < 6; i++)
-    {
-      if(tab->connexions[i].pidModification == pid)
-      {
-        tab->connexions[i].pidModification =0;
-        i=6;
-        //printf("fait\n");
+    
       }
     }
   }
@@ -449,9 +436,7 @@ void Login(MESSAGE m)
   type = m.expediteur;
   if(strcmp(m.data1, "1")==0 )
   {
-    printf("etape1\n");
     verif = estPresent(m.data2);
-    printf("verif %d\n", verif);
     if (verif<=0)
     {
       valRet = ajouteUtilisateur(m.data2, m.texte);
@@ -459,7 +444,7 @@ void Login(MESSAGE m)
       {
         fprintf(stderr, "Ajout ok");
         reponse.type = m.expediteur;
-        printf("=>%d\n", m.expediteur);
+      
         reponse.expediteur=1;
         reponse.requete= 3;
         strcpy(reponse.data1, "OK");
@@ -491,7 +476,7 @@ void Login(MESSAGE m)
     {
       if(verif >1)
       {
-        printf("utilisateur deja estPresent");
+      
         reponse.type = m.expediteur;
         reponse.expediteur=1;
         reponse.requete= 3;

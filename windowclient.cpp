@@ -474,7 +474,7 @@ void WindowClient::on_pushButtonEnvoyer_clicked()
       perror("Erreur msgsnd");
       exit(1);
     }
-    printf("envois ok\n");
+  
 
     alarm(1);
 
@@ -493,12 +493,13 @@ void WindowClient::on_pushButtonConsulter_clicked()
     perror("Erreur msgsnd CONSULT");
     exit(1);
   }
+  printf("CONSULT envoyer\n");
   alarm(1);
 }
 
 void WindowClient::on_pushButtonModifier_clicked()
 {
-  alarm(1);
+  
   // TO DO
   // Envoi d'une requete MODIF1 au serveur
     MESSAGE m;
@@ -511,8 +512,7 @@ void WindowClient::on_pushButtonModifier_clicked()
       exit(1);
     }
 
-  // ...
-    printf("requete Envoyer\n");
+
   // Attente d'une reponse en provenance de Modification
   fprintf(stderr,"(CLIENT %d) Attente reponse MODIF1\n",getpid());
   // ...
@@ -524,13 +524,14 @@ void WindowClient::on_pushButtonModifier_clicked()
     perror("Erreur msgrcv Client");
     exit(0);
   }
-  printf("m.data1 =>%s\n", m.data1);
+  
   // Verification si la modification est possible
   if (strcmp(m.data1,"KO") == 0 && strcmp(m.data2,"KO") == 0 && strcmp(m.texte,"KO") == 0)
   {
     QMessageBox::critical(w,"Problème...","Modification déjà en cours...");
     return;
   }
+
   setMotDePasse(getMotDePasse());
   setGsm(m.data2);
   setEmail(m.texte);
@@ -559,7 +560,7 @@ void WindowClient::on_pushButtonModifier_clicked()
   if(strlen(motDePasse)!=0)
   {
     strcpy(m.data1, motDePasse);
-    printf("mdp=> %s \n", motDePasse);
+ 
   }
   
   m.type = 1;
@@ -571,7 +572,7 @@ void WindowClient::on_pushButtonModifier_clicked()
     exit(1);
   }
   
-  printf("MODIF2 envoyer\n");
+  alarm(1);
   
 }
 
@@ -648,6 +649,7 @@ void WindowClient::on_checkBox2_clicked(bool checked)
   alarm(1);
   timeOut= TIME_OUT;
   w->setTimeOut(timeOut);
+  alarm(1);
 }
 
 void WindowClient::on_checkBox3_clicked(bool checked)
@@ -771,6 +773,7 @@ void handlerSIGUSR1(int sig)
   
       switch(m.requete)
       {
+
         case LOGIN :
                     if (strcmp(m.data1,"OK") == 0)
                     {
@@ -823,6 +826,7 @@ void handlerSIGUSR1(int sig)
 
         case CONSULT :
                   // TO DO
+                  
                     if(strcmp(m.data1, "OK")==0)
                     {
                       w->setEmail(m.texte);
@@ -830,9 +834,17 @@ void handlerSIGUSR1(int sig)
                     }
                     else
                     {
-                      w->dialogueErreur("NON TROUVE", "Utilisateur non trouver");
+                      if(strcmp(m.data1,"KO")==0)
+                      {
+                        w->dialogueErreur("NON TROUVE", "Utilisateur non trouver");
+                      }
+                      else
+                      {
+                      
+                        w->setGsm(m.data1);
+                        w->setEmail(m.data1);
+                      }
                     }
-                    
                   break;
 
       }

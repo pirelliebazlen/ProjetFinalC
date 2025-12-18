@@ -55,7 +55,7 @@ Consultation:	Consultation.cpp
 
 
 Modification:	Modification.cpp FichierUtilisateur.o
-					g++ Modification.cpp FichierUtilisateur.o -o Modification -I/usr/include/mysql -m64 -L/usr/lib64/mysql -lmysqlclient -lpthread -lz -lm -lrt -lssl -lcrypto -ldl
+					g++ Modification.cpp FichierUtilisateur.o -o Modification -I/usr/include/mysql -m64 -L/usr/lib64/mysql -lmysqlclient -lpthread -lz -lm -lrt -lssl -lcrypto -ldl -fpermissive
 clean:	
 	rm -r *.o  Serveur Administrateur Publicite Modification Client Consultation BidonFichierPub
 
