@@ -22,7 +22,7 @@ union semun
 int main()
 {
   // Recuperation de l'identifiant de la file de messages
-  struct sembuf operations[2];
+  struct sembuf operation;
   MESSAGE m;
   MESSAGE reponse;
   unsigned short valSem;
@@ -35,7 +35,10 @@ int main()
 
   fprintf(stderr,"(CONSULTATION %d) Recuperation de l'id de la file de messages\n",getpid());
 
-
+  // Lecture de la requête CONSULT
+  
+  
+  fprintf(stderr,"(CONSULTATION %d) Lecture requete CONSULT\n",getpid());
   type=getpid();
   if(msgrcv(idQ, &m, sizeof(MESSAGE)-sizeof(long), type, 0)==-1)
   {
@@ -56,7 +59,7 @@ int main()
   {
     perror("Erreur de semctl Consultation");
   }
- 
+  printf("valSem %d\n", valSem);
   if(valSem==0)
   {
     reponse.expediteur= getpid();
@@ -71,93 +74,93 @@ int main()
     kill(m.expediteur,SIGUSR1);
    
   }
-
-  operations[0].sem_num=0;
-  operations[0].sem_op=-1;
-  operations[0].sem_flg=0;
-
-  if(semop(idSem, operations,1)==-1)
-  {
-    perror("Erreur semop");
-  }
-
-
-  // Lecture de la requête CONSULT
-  
-  
-  fprintf(stderr,"(CONSULTATION %d) Lecture requete CONSULT\n",getpid());
-  
-  // Tentative de prise bloquante du semaphore 0
-
-  fprintf(stderr,"(CONSULTATION %d) Prise bloquante du sémaphore 0\n",getpid());
-
-  // Connexion à la base de donnée
-  MYSQL *connexion = mysql_init(NULL);
-  fprintf(stderr,"(CONSULTATION %d) Connexion à la BD\n",getpid());
-  if (mysql_real_connect(connexion,"localhost","Student","PassStudent1_","PourStudent",0,0,0) == NULL)
-  {
-    fprintf(stderr,"(CONSULTATION) Erreur de connexion à la base de données...\n");
-    exit(1);  
-  }
-
-  // Recherche des infos dans la base de données
-  fprintf(stderr,"(CONSULTATION %d) Consultation en BD (%s)\n",getpid(),m.data1);
-  MYSQL_RES  *resultat;
-  MYSQL_ROW  tuple;
-  char requete[200];
-  sprintf(requete,"select * from UNIX_FINAL where lower(nom) like lower('%s')", m.data1);
-  mysql_query(connexion,requete),
-  resultat = mysql_store_result(connexion);
-  if(resultat==NULL)
-  {
-     fprintf(stderr, "Erreur MySQL : %s\n", mysql_error(connexion));
-  }
   else
   {
-    if((tuple = mysql_fetch_row(resultat)) != NULL)
-    {
+      // Tentative de prise bloquante du semaphore 0
+
+      fprintf(stderr,"(CONSULTATION %d) Prise bloquante du sémaphore 0\n",getpid());
+
+      operation.sem_num=0;
+      operation.sem_op=-1;
+      operation.sem_flg=0;
+
+      if(semop(idSem, &operation,1)==-1)
+      {
+        perror("Erreur semop");
+      }
+
+
      
-      // Construction et envoi de la reponse
-      reponse.expediteur=getpid();
-      reponse.type=m.expediteur;
-      strcpy(reponse.data1, "OK");
-      strcpy(reponse.data2, tuple[2]);
-      strcpy(reponse.texte, tuple[3]);
+      // Connexion à la base de donnée
+      MYSQL *connexion = mysql_init(NULL);
+      fprintf(stderr,"(CONSULTATION %d) Connexion à la BD\n",getpid());
+      if (mysql_real_connect(connexion,"localhost","Student","PassStudent1_","PourStudent",0,0,0) == NULL)
+      {
+        fprintf(stderr,"(CONSULTATION) Erreur de connexion à la base de données...\n");
+        exit(1);  
+      }
+
+      // Recherche des infos dans la base de données
+      fprintf(stderr,"(CONSULTATION %d) Consultation en BD (%s)\n",getpid(),m.data1);
+      MYSQL_RES  *resultat;
+      MYSQL_ROW  tuple;
+      char requete[200];
+      sprintf(requete,"select * from UNIX_FINAL where lower(nom) like lower('%s')", m.data1);
+      mysql_query(connexion,requete),
+      resultat = mysql_store_result(connexion);
+      if(resultat==NULL)
+      {
+         fprintf(stderr, "Erreur MySQL : %s\n", mysql_error(connexion));
+      }
+      else
+      {
+        if((tuple = mysql_fetch_row(resultat)) != NULL)
+        {
+         
+          // Construction et envoi de la reponse
+          reponse.expediteur=getpid();
+          reponse.type=m.expediteur;
+          strcpy(reponse.data1, "OK");
+          strcpy(reponse.data2, tuple[2]);
+          strcpy(reponse.texte, tuple[3]);
+         
+        }
+        else
+        {
+      
+          reponse.expediteur=getpid();
+          reponse.type=m.expediteur;
+        
+          strcpy(reponse.data1, "KO");
+        }
+        reponse.requete = CONSULT;
+        printf("pid client=>%d\n", m.expediteur);
+        if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+        {
+            perror("Erreur msgsnd CONSULTATION");
+            exit(1);
+        }
+        kill(m.expediteur, SIGUSR1);
+        printf("kill envoyer au client\n");
+      }
+
+      
+      // Deconnexion BD
+      mysql_close(connexion);
+
+      // Libération du semaphore 0
      
-    }
-    else
-    {
-  
-      reponse.expediteur=getpid();
-      reponse.type=m.expediteur;
-    
-      strcpy(reponse.data1, "KO");
-    }
-    reponse.requete = CONSULT;
-    printf("pid client=>%d\n", m.expediteur);
-    if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long), 0)==-1)
-    {
-        perror("Erreur msgsnd CONSULTATION");
-        exit(1);
-    }
-    kill(m.expediteur, SIGUSR1);
-    printf("kill envoyer au client\n");
+      operation.sem_op=+1;
+
+
+      if(semop(idSem, &operation,1)==-1)
+      {
+        perror("Erreur semop");
+      }
+      fprintf(stderr,"(CONSULTATION %d) Libération du sémaphore 0\n",getpid());
+
   }
 
   
-  // Deconnexion BD
-  mysql_close(connexion);
-
-  // Libération du semaphore 0
-  operations[1].sem_num=0;
-  operations[1].sem_op=+1;
-  operations[1].sem_flg=0;
-
-  if(semop(idSem, operations,1)==-1)
-  {
-    perror("Erreur semop");
-  }
-  fprintf(stderr,"(CONSULTATION %d) Libération du sémaphore 0\n",getpid());
-
   exit(1);
 }

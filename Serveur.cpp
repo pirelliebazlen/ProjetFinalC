@@ -22,7 +22,7 @@
 int idQ,idShm,idSem;
 TAB_CONNEXIONS *tab;
 int pid, idfils, idfils2, idfils3;
-
+int pidAdministrateur=0;
 union semun {
     int val;               // Pour SETVAL
     struct semid_ds *buf;  // Pour IPC_STAT, IPC_SET
@@ -40,6 +40,10 @@ void RemoveUserOnTheTable(MESSAGE message, MESSAGE reponse);
 void RefuseUser(MESSAGE m);
 void acceptUser(MESSAGE m);
 void envoisMessage(MESSAGE m);
+void NewUser(MESSAGE m);
+void DelUser(MESSAGE m);
+void loginAdmin(MESSAGE m);
+void publicit(MESSAGE m);
 int main()
 {
     int i,k,j;
@@ -52,6 +56,7 @@ int main()
     PUBLICITE pub;
     char taille[200];
     char * pShm;
+   
     // Connection à la BD
     connexion = mysql_init(NULL);
     if (mysql_real_connect(connexion,"localhost","Student","PassStudent1_","PourStudent",0,0,0) == NULL)
@@ -128,15 +133,14 @@ int main()
       perror("erreur shmget");
       exit(0);
     }
-
-    printf("idShm=>%d\n", idShm);
+    printf("idshm=> %d\n", idSem);
 
     if((pShm = (char*)shmat(idShm, NULL,0))==(char*)-1)
     {
       perror("Erreur de shmat");
       exit(1);
     }
-    printf("pShm=>%p\n", pShm);
+    printf("pShm %p\n",pShm);
     if((idfils=fork()) == -1)
     {
       perror("Erreur fork\n");
@@ -153,7 +157,7 @@ int main()
       }
     
     }
-
+    //printf("mem partager Serveur=> %s\n", pShm);
 
     while(1)
     {
@@ -244,6 +248,7 @@ int main()
                           if(tab->connexions[i].pidFenetre!=0)
                           {
                             kill(tab->connexions[i].pidFenetre, SIGUSR2);
+                            printf("SIGUSR2 envoyé");
                           }
                         }
                         break;
@@ -332,22 +337,27 @@ int main()
 
         case LOGIN_ADMIN :
                         fprintf(stderr,"(SERVEUR %d) Requete LOGIN_ADMIN reçue de %d\n",getpid(),m.expediteur);
+                        loginAdmin(m);
                         break;
 
         case LOGOUT_ADMIN :
                         fprintf(stderr,"(SERVEUR %d) Requete LOGOUT_ADMIN reçue de %d\n",getpid(),m.expediteur);
+                        pidAdministrateur=0;
                         break;
 
         case NEW_USER :
                         fprintf(stderr,"(SERVEUR %d) Requete NEW_USER reçue de %d : --%s--%s--\n",getpid(),m.expediteur,m.data1,m.data2);
+                        NewUser(m);
                         break;
 
         case DELETE_USER :
                         fprintf(stderr,"(SERVEUR %d) Requete DELETE_USER reçue de %d : --%s--\n",getpid(),m.expediteur,m.data1);
+                        DelUser(m);
                         break;
 
         case NEW_PUB :
                         fprintf(stderr,"(SERVEUR %d) Requete NEW_PUB reçue de %d\n",getpid(),m.expediteur);
+                        publicit(m);
                         break;
 
       }
@@ -395,6 +405,7 @@ void HandlerSIGINT(int sig)
     perror("Erreur de semctl (3)");
     exit(1);
   }
+  //kill(tab->pidPublicite, SIGINT);
 
 }
 
@@ -419,6 +430,181 @@ void HandlerSIGCHLD(int sig)
   }
 
 }
+void loginAdmin(MESSAGE m)
+{
+  MESSAGE reponse;
+  if(pidAdministrateur==0)
+  {
+    pidAdministrateur=m.expediteur;
+    reponse.type=m.expediteur;
+    reponse.expediteur=getpid();
+    reponse.requete=LOGIN_ADMIN;
+    strcpy(reponse.data1, "OK");
+    if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd SERVEUR LOGIN_ADMIN");
+      exit(0);
+    }
+    printf("LOGIN_ADMIN OK\n");
+
+  }
+  else
+  {
+    reponse.type=m.expediteur;
+    reponse.expediteur=getpid();
+    reponse.requete=LOGIN_ADMIN;
+    strcpy(reponse.data1, "KO");
+    if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+    {
+      perror("Erreur msgsnd SERVEUR LOGIN_ADMIN");
+      exit(0);
+    }
+    printf("LOGIN_ADMIN K.O\n");
+
+  }
+}
+void NewUser(MESSAGE m)
+{
+  int verif, valRetAjout;
+  MESSAGE reponse;
+  char GSM[20];
+  char email[100];
+  char requete[256];
+
+  verif= estPresent(m.data1);
+  printf("verif=> %d\n", verif);
+  if(verif==0)
+  {
+    valRetAjout=ajouteUtilisateur(m.data1, m.data2);
+    if(valRetAjout==1)
+    {
+
+      fprintf(stderr, "Ajout ok");
+      reponse.expediteur=getpid();
+      reponse.type=m.expediteur;
+      reponse.requete=NEW_USER;
+      strcpy(reponse.data1, "OK");
+      strcpy(reponse.texte, "Ajout avec succés");
+      strcpy(GSM, "---");
+      strcpy(email, "---");
+      sprintf(requete, "insert into UNIX_FINAL values (NULL,'%s', '%s', '%s');", m.data1, GSM, email);
+      mysql_query(connexion, requete);
+    }
+    else
+    {
+      reponse.expediteur=getpid();
+      reponse.type=m.expediteur;
+      reponse.requete=NEW_USER;
+      strcpy(reponse.data1, "KO");
+      strcpy(reponse.texte, "utilisateur n'a pas pu etre enregistré");
+    }
+    
+  }
+  else
+  {
+    if(verif==-1) //quand fichier pas encore recrée
+    {
+        valRetAjout=ajouteUtilisateur(m.data1, m.data2);
+        if(valRetAjout==1)
+        {
+
+          fprintf(stderr, "Ajout ok");
+          reponse.expediteur=getpid();
+          reponse.type=m.expediteur;
+          reponse.requete=NEW_USER;
+          strcpy(reponse.data1, "OK");
+          strcpy(reponse.texte, "Ajout avec succés");
+          strcpy(GSM, "---");
+          strcpy(email, "---");
+          sprintf(requete, "insert into UNIX_FINAL values (NULL,'%s', '%s', '%s');", m.data1, GSM, email);
+          mysql_query(connexion, requete);
+        }
+        else
+        {
+          reponse.expediteur=getpid();
+          reponse.type=m.expediteur;
+          reponse.requete=NEW_USER;
+          strcpy(reponse.data1, "KO");
+          strcpy(reponse.texte, "utilisateur n'a pas pu etre enregistré");
+        }
+    }
+    else
+    {
+      reponse.expediteur=getpid();
+      reponse.type=m.expediteur;
+      reponse.requete=NEW_USER;
+      strcpy(reponse.data1, "KO");
+      strcpy(reponse.texte, "utilisateur n'a pas été trouver");
+    }
+  }
+
+  if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long),0)==-1)
+  {
+    perror("Erreur msgsnd NewUser");
+    exit(0);
+  }
+}
+
+
+void DelUser(MESSAGE m)
+{
+  int fd, cmpt=0;
+  UTILISATEUR util;
+  MESSAGE reponse;
+  char requete[256];
+  fd= open(FICHIER_UTILISATEURS, O_RDWR);
+  if(fd==-1)
+  {
+    perror("Erreur d'ouverture de fichier\n");
+    exit(0);
+  }
+  while(read(fd, &util, sizeof(UTILISATEUR))==sizeof(UTILISATEUR))
+  {
+    
+    if(strcmp(util.nom, m.data1)==0)
+    {
+      strcpy(util.nom, "");
+      util.hash=0;
+      lseek(fd, cmpt, SEEK_SET);
+      write(fd, &util, sizeof(UTILISATEUR));
+
+      sprintf(requete, "DELETE from UNIX_FINAL where lower(nom) like lower('%s')", m.data1);
+      mysql_query(connexion, requete);
+
+      reponse.expediteur=getpid();
+      reponse.type=m.expediteur;
+      reponse.requete=DELETE_USER;
+      strcpy(reponse.data1, "OK");
+      strcpy(reponse.texte, "utilisateur supprimer");
+      if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long),0)==-1)
+      {
+        perror("Erreur msgsnd NewUser");
+        exit(0);
+      }
+      cmpt=0;
+      break;
+    }
+    cmpt+=sizeof(UTILISATEUR);
+  }
+
+  if(cmpt> 0)
+  {
+    reponse.expediteur=getpid();
+    reponse.type=m.expediteur;
+    reponse.requete=DELETE_USER;
+    strcpy(reponse.data1, "KO");
+    strcpy(reponse.texte, "utilisateur n'a pas été trouver");
+    if(msgsnd(idQ, &reponse, sizeof(MESSAGE)-sizeof(long),0)==-1)
+    {
+      perror("Erreur msgsnd NewUser");
+      exit(0);
+    }
+  }
+  close(fd);
+
+}
+
+
 void Login(MESSAGE m)
 {
   int fd, verif,j, ret;
@@ -429,9 +615,6 @@ void Login(MESSAGE m)
   char *nom1;
   MESSAGE reponse;
   MESSAGE autre;
-  char GSM[20];
-  char email[100];
-  char requete[256];
 
   type = m.expediteur;
   if(strcmp(m.data1, "1")==0 )
@@ -449,10 +632,7 @@ void Login(MESSAGE m)
         reponse.requete= 3;
         strcpy(reponse.data1, "OK");
         strcpy(reponse.texte, "utilisateur enregistré avec succés");
-        strcpy(GSM, "---");
-        strcpy(email, "---");
-        sprintf(requete, "insert into UNIX_FINAL values (NULL,'%s', '%s', '%s');", m.data2, GSM, email);
-        mysql_query(connexion, requete);
+        
         for(i=0; i < 6; i++)
         {
 
@@ -747,4 +927,41 @@ void envoisMessage(MESSAGE m)
       i=5;
     }
   }  
+}
+void publicit(MESSAGE m)
+{
+  PUBLICITE pub, pubEcris;
+  int fd, trouve=0, cmpt=0;
+  fd = open("publicites.dat", O_RDWR|O_CREAT, 0777);
+  if(fd==-1)
+  {
+    perror("Erreur d'ouverture");
+    
+  }
+  else
+  {
+    cmpt=cmpt-sizeof(PUBLICITE);
+    while(read(fd, &pub, sizeof(PUBLICITE))==sizeof(PUBLICITE))
+    {
+      printf("pub=> %s\t nbSecondes=> %d\n", pub.texte, pub.nbSecondes);
+      if(strcmp(pub.texte, m.texte)==0)
+      {
+        trouve=1;
+      }
+      cmpt+=sizeof(PUBLICITE);
+    }
+    if(trouve==0)
+    {
+      strcpy(pubEcris.texte, m.texte);
+      pubEcris.nbSecondes = atoi(m.data1);
+      write(fd, &pubEcris, sizeof(MESSAGE));
+    }
+    if(cmpt==0)
+    {
+      kill(tab->pidPublicite, SIGUSR1);
+    }
+    close(fd);
+  }
+
+  
 }

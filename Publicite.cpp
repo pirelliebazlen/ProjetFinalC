@@ -22,9 +22,11 @@ void HandlerSIGINT(int sig);
 int main()
 {
   
-  MESSAGE m;
+  MESSAGE m, autreM;
   // Armement des signaux
   struct sigaction A;
+  long type;
+  PUBLICITE pub;
   A.sa_handler = HandlerSIGINT;
   A.sa_flags = 0;
   sigemptyset(&A.sa_mask);
@@ -62,19 +64,35 @@ int main()
     perror("Erreur de shmat");
     exit(1);
   }
+   printf("pShm Pub => %p\n", pShm);
 
   // Ouverture du fichier de publicité
   if((fd = open("publicites.dat", O_RDONLY))==-1)
   {
     perror("Erreur ouverture fichier");
-    exit(1);
+    type= getpid();
+    if(msgrcv(idQ, &autreM, sizeof(MESSAGE)- sizeof(long), type, 0)==-1)
+    {
+      perror("Erreur msgrcv\n");
+      exit(0);
+    }
+    printf("m.expediteur %d\n", autreM.expediteur);
+    if((fd = open("publicites.dat", O_RDONLY))==-1)
+    {
+        perror("Erreur fichier");
+        exit(1);
+    }
+    
+
   }
 
+ printf("fd=> %d\n", fd);
 
   while(1)
   {
-  	PUBLICITE pub;
+  	
     // Lecture d'une publicité dans le fichier
+    printf("pub.txte=> %s\n", pub.texte);
     if(read(fd, &pub, sizeof(PUBLICITE))<0)
     {
       perror("Erreur read Publicite");
@@ -88,7 +106,7 @@ int main()
     {
       // Ecriture en mémoire partagée
       strcpy(pShm, pub.texte);
-      printf("mem partagée => %s\n", pShm);
+      printf("pub.txte=> %s\n", pShm);
       // Envoi d'une requete UPDATE_PUB au serveur
       m.type=1;
       m.expediteur= getpid();
@@ -98,6 +116,7 @@ int main()
         perror("Erreur msgsnd Publicite");
         exit(1);
       }
+      printf("UPDATE envoyé\n");
     }
     
     //Attente de ...
@@ -109,5 +128,5 @@ int main()
 }
 void HandlerSIGINT(int sig)
 {
-
+  
 }

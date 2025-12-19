@@ -78,7 +78,7 @@ int main()
       {
         perror("Erreur msgsnd dans semctl");
       }
-      return;
+    
 
     }
     else

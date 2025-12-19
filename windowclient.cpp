@@ -421,9 +421,8 @@ void WindowClient::on_pushButtonLogin_clicked()
 {
     // TO DO
     MESSAGE mes;
-    MESSAGE rep;
+
     int check;
-    long type;
     mes.type = 1;
     mes.expediteur= getpid();
     mes.requete = 3;
@@ -879,5 +878,6 @@ void HandlerALRM(int sig)
 }
 void handlerSIGUSR2(int sig)
 {
+  printf("je suis dans SIGUSR2");
   w->setPublicite(pShm);
 }

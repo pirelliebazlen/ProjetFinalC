@@ -5,11 +5,17 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
+
 extern int idQ;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*if((idQ=msgget(CLE, 0))==-1)
+{
+    perror("Erreur msgget");
+    exit(0);
+}*/
 WindowAdmin::WindowAdmin(QWidget *parent):QMainWindow(parent),ui(new Ui::WindowAdmin)
 {
     ui->setupUi(this);
@@ -113,20 +119,100 @@ void WindowAdmin::dialogueErreur(const char* titre,const char* message)
 void WindowAdmin::on_pushButtonAjouterUtilisateur_clicked()
 {
   // TO DO
+  MESSAGE m;
+  long type;
+  m.expediteur=getpid();
+  m.type=1;
+  m.requete= NEW_USER;
+  strcpy(m.data1, getNom());
+  strcpy(m.data2, getMotDePasse());
+  if(msgsnd(idQ, &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+  {
+    perror("Erreur msgsnd windowadmin Ajout");
+    exit(0);
+  }
+  memset(&m,0, sizeof(MESSAGE));
+  type= getpid();
+   if(msgrcv(idQ, &m, sizeof(MESSAGE)-sizeof(long), type,0)==-1)
+  {
+    perror("Erreur msgsnd windowadmin Ajout");
+    exit(0);
+  }
+  if(strcmp(m.data1, "OK")==0)
+  {
+    dialogueMessage("Succés", m.texte);
+  }
+  else
+  {
+    dialogueErreur("Probleme", m.texte);
+  }
+  
+
 }
 
 void WindowAdmin::on_pushButtonSupprimerUtilisateur_clicked()
 {
   // TO DO
+   MESSAGE m;
+   long type;
+   m.expediteur=getpid();
+   m.type=1;
+   m.requete= DELETE_USER;
+   strcpy(m.data1, getNom());
+   if(msgsnd(idQ, &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+   {
+     perror("Erreur msgsnd windowadmin Supprime");
+     exit(0);
+   }
+
+   memset(&m,0, sizeof(MESSAGE));
+   type= getpid();
+  if(msgrcv(idQ, &m, sizeof(MESSAGE)-sizeof(long), type,0)==-1)
+  {
+    perror("Erreur msgsnd windowadmin Ajout");
+    exit(0);
+  }
+  if(strcmp(m.data1, "OK")==0)
+  {
+    dialogueMessage("Succés", m.texte);
+  }
+  else
+  {
+    dialogueErreur("Probleme", m.texte);
+  }
+  
 }
 
 void WindowAdmin::on_pushButtonAjouterPublicite_clicked()
 {
   // TO DO
+   MESSAGE m;
+   char conv[20];
+   m.expediteur=getpid();
+   m.type=1;
+   m.requete= NEW_PUB;
+   sprintf(conv, "%d", getNbSecondes());
+   strcpy(m.data1, conv);
+   strcpy(m.texte, getTexte());
+   if(msgsnd(idQ, &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+   {
+     perror("Erreur msgsnd windowadmin pub");
+     exit(0);
+   }
 }
 
 void WindowAdmin::on_pushButtonQuitter_clicked()
 {
   // TO DO
+  MESSAGE m;
+  m.expediteur=getpid();
+  m.type=1;
+  m.requete= LOGOUT_ADMIN;
+  if(msgsnd(idQ, &m, sizeof(MESSAGE)-sizeof(long), 0)==-1)
+  {
+    perror("Erreur msgsnd windowadmin quitter");
+    exit(0);
+  }
+
   exit(0);
 }

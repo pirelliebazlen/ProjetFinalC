@@ -11,7 +11,7 @@ int estPresent(const char* nom)
   // TO DO
   int fd;
   UTILISATEUR maStruct;
-  int cpt =1;
+  int cpt =0;
   int r;
   if((fd= open(FICHIER_UTILISATEURS, O_RDONLY))==-1)
   {
@@ -32,6 +32,7 @@ int estPresent(const char* nom)
         }
         
         cpt++;
+        printf("cpt %d\n", cpt);
 
       }
       if (r==-1)
@@ -70,8 +71,11 @@ int ajouteUtilisateur(const char* nom, const char* motDePasse)
   // TO DO
   int fd;
   UTILISATEUR *util;
+  UTILISATEUR tmp;
+  int cmpt=0;
   int ha;
-  if((fd=open(FICHIER_UTILISATEURS, O_WRONLY|O_APPEND|O_CREAT, 0777))==-1)
+  int trouve;
+  if((fd=open(FICHIER_UTILISATEURS, O_RDWR|O_CREAT, 0777))==-1)
   {
     printf("Erreur");
     return -1;
@@ -88,14 +92,37 @@ int ajouteUtilisateur(const char* nom, const char* motDePasse)
     }
     else
     {
-      strcpy(util->nom, nom);
-      util->hash = hash(motDePasse);
-      write(fd, util, sizeof(UTILISATEUR));
+      while(read(fd, &tmp, sizeof(UTILISATEUR))==sizeof(UTILISATEUR))
+      {
+        printf("je cherche hash=0\n");
+
+        if(tmp.hash==0)
+        {
+          printf("tr0uvé\n");
+          printf("cmpt=>%d\n", cmpt);
+          strcpy(util->nom, nom);
+          util->hash = hash(motDePasse);
+          lseek(fd, cmpt, SEEK_SET);
+          write(fd, util, sizeof(UTILISATEUR));
+          trouve=0;
+          break;
+        }
+        cmpt+=sizeof(UTILISATEUR);
+      }
+
+      if(trouve!=0)
+      {
+        printf("Pas tr0uvé\n");
+        strcpy(util->nom, nom);
+        util->hash = hash(motDePasse);
+        write(fd, util, sizeof(UTILISATEUR));
+      }
+      
       close(fd);
       free(util);
       printf(" Nouvel utilisateur créé : bienvenue ! \n");
       return 1;
-      
+  
     }
     
    return 0;
@@ -119,12 +146,13 @@ int verifieMotDePasse(int pos, const char* motDePasse)
 
    
     int valSEEK=lseek(fd, pos*sizeof(UTILISATEUR), SEEK_SET);
-
+    printf("valSEEK=>%d\n", valSEEK);
     read(fd, &util, sizeof(UTILISATEUR));
     printf("nom=>%s----hash=%d\n", util.nom, util.hash);
     close(fd);
 
     hash1=hash(motDePasse);
+    printf("hash1 %d\n hash %d\n", hash1, util.hash);
     if(hash1 == util.hash)
     {
       return 1;
