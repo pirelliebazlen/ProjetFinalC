@@ -24,15 +24,13 @@ int estPresent(const char* nom)
 
       while((r =read(fd,&maStruct ,sizeof(UTILISATEUR)))== sizeof(UTILISATEUR))
       {
-
+        cpt++;
         if(strcmp(maStruct.nom, nom)==0)
         {
+          
           close(fd);
           return cpt;
         }
-        
-        cpt++;
-        printf("cpt %d\n", cpt);
 
       }
       if (r==-1)
@@ -94,12 +92,11 @@ int ajouteUtilisateur(const char* nom, const char* motDePasse)
     {
       while(read(fd, &tmp, sizeof(UTILISATEUR))==sizeof(UTILISATEUR))
       {
-        printf("je cherche hash=0\n");
+        
 
         if(tmp.hash==0)
         {
-          printf("tr0uvé\n");
-          printf("cmpt=>%d\n", cmpt);
+        
           strcpy(util->nom, nom);
           util->hash = hash(motDePasse);
           lseek(fd, cmpt, SEEK_SET);
@@ -112,7 +109,7 @@ int ajouteUtilisateur(const char* nom, const char* motDePasse)
 
       if(trouve!=0)
       {
-        printf("Pas tr0uvé\n");
+      
         strcpy(util->nom, nom);
         util->hash = hash(motDePasse);
         write(fd, util, sizeof(UTILISATEUR));
@@ -158,7 +155,7 @@ int verifieMotDePasse(int pos, const char* motDePasse)
       return 1;
     }
   }
-  
+  close(fd);
   return 0;
 }
 

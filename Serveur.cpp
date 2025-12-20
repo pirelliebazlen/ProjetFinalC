@@ -157,7 +157,7 @@ int main()
       }
     
     }
-    //printf("mem partager Serveur=> %s\n", pShm);
+    printf("mem partager Serveur=> %s\n", pShm);
 
     while(1)
     {
@@ -530,11 +530,25 @@ void NewUser(MESSAGE m)
     }
     else
     {
-      reponse.expediteur=getpid();
+      if (verif>0)
+      {
+          fprintf(stderr, "Ajout ok");
+          reponse.expediteur=getpid();
+          reponse.type=m.expediteur;
+          reponse.requete=NEW_USER;
+          strcpy(reponse.data1, "OK");
+          strcpy(reponse.texte, "Ajout avec succés");
+          strcpy(GSM, "---");
+          strcpy(email, "---");
+          sprintf(requete, "insert into UNIX_FINAL values (NULL,'%s', '%s', '%s');", m.data1, GSM, email);
+          mysql_query(connexion, requete);
+      }
+
+      /*reponse.expediteur=getpid();
       reponse.type=m.expediteur;
       reponse.requete=NEW_USER;
       strcpy(reponse.data1, "KO");
-      strcpy(reponse.texte, "utilisateur n'a pas été trouver");
+      strcpy(reponse.texte, "utilisateur n'a pas été trouver");*/
     }
   }
 
@@ -676,10 +690,11 @@ void Login(MESSAGE m)
   {
 
     verif = estPresent(m.data2);
+    printf("verif %d\n", verif);
     if (verif>0)
     {
       val = verifieMotDePasse(verif, m.texte);
-                    
+        printf("val %d\n", val);        
       if(val == 1)
       {
         printf("Ajout ok\n");
@@ -940,10 +955,10 @@ void publicit(MESSAGE m)
   }
   else
   {
-    cmpt=cmpt-sizeof(PUBLICITE);
+    
     while(read(fd, &pub, sizeof(PUBLICITE))==sizeof(PUBLICITE))
     {
-      printf("pub=> %s\t nbSecondes=> %d\n", pub.texte, pub.nbSecondes);
+      printf("while serv pub=> %s\t nbSecondes=> %d\n", pub.texte, pub.nbSecondes);
       if(strcmp(pub.texte, m.texte)==0)
       {
         trouve=1;
@@ -953,8 +968,9 @@ void publicit(MESSAGE m)
     if(trouve==0)
     {
       strcpy(pubEcris.texte, m.texte);
+      printf("atoi(m.data1) %d\n", atoi(m.data1));
       pubEcris.nbSecondes = atoi(m.data1);
-      write(fd, &pubEcris, sizeof(MESSAGE));
+      write(fd, &pubEcris, sizeof(PUBLICITE));
     }
     if(cmpt==0)
     {
