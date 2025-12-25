@@ -444,6 +444,7 @@ void WindowClient::on_pushButtonLogin_clicked()
 void WindowClient::on_pushButtonLogout_clicked()
 {
     // TO DO
+
      MESSAGE mes;
     mes.type = 1;
     mes.expediteur= getpid();
@@ -461,6 +462,7 @@ void WindowClient::on_pushButtonLogout_clicked()
 
 void WindowClient::on_pushButtonEnvoyer_clicked()
 {
+  timeOut = TIME_OUT;
     // TO DO
     MESSAGE mes;
     mes.type = 1;
@@ -474,8 +476,8 @@ void WindowClient::on_pushButtonEnvoyer_clicked()
       exit(1);
     }
   
-
     alarm(1);
+   
 
 }
 
@@ -498,6 +500,7 @@ void WindowClient::on_pushButtonConsulter_clicked()
 
 void WindowClient::on_pushButtonModifier_clicked()
 {
+  timeOut = TIME_OUT;
   
   // TO DO
   // Envoi d'une requete MODIF1 au serveur
@@ -580,6 +583,7 @@ void WindowClient::on_pushButtonModifier_clicked()
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void WindowClient::on_checkBox1_clicked(bool checked)
 {
+  timeOut = TIME_OUT;
   MESSAGE m;
   
   m.expediteur= getpid();
@@ -611,7 +615,6 @@ void WindowClient::on_checkBox1_clicked(bool checked)
         }
     }
     alarm(1);
-    timeOut= TIME_OUT;
     w->setTimeOut(timeOut);
 }
 
@@ -645,14 +648,15 @@ void WindowClient::on_checkBox2_clicked(bool checked)
       exit(1);
     }
   }
+ 
   alarm(1);
-  timeOut= TIME_OUT;
   w->setTimeOut(timeOut);
   alarm(1);
 }
 
 void WindowClient::on_checkBox3_clicked(bool checked)
 {
+  timeOut = TIME_OUT;
     MESSAGE m;
   
     m.expediteur= getpid();
@@ -683,12 +687,12 @@ void WindowClient::on_checkBox3_clicked(bool checked)
       }
     }
     alarm(1);
-    timeOut= TIME_OUT;
     w->setTimeOut(timeOut);
 }
 
 void WindowClient::on_checkBox4_clicked(bool checked)
 {
+  timeOut = TIME_OUT;
     MESSAGE m;
     m.expediteur= getpid();
     m.type = 1;
@@ -715,13 +719,14 @@ void WindowClient::on_checkBox4_clicked(bool checked)
         exit(1);
       }
     }
-    alarm(1);
-    timeOut= TIME_OUT;
+   alarm(1);
+
     w->setTimeOut(timeOut);
 }
 
 void WindowClient::on_checkBox5_clicked(bool checked)
 {
+  timeOut = TIME_OUT;
     MESSAGE m; 
     m.expediteur= getpid();
     m.type = 1;
@@ -748,10 +753,9 @@ void WindowClient::on_checkBox5_clicked(bool checked)
         exit(1);
       }
     }
-    alarm(0);
-    timeOut= TIME_OUT;
-    w->setTimeOut(timeOut);
     alarm(1);
+    w->setTimeOut(timeOut);
+  
 
 }
 
@@ -871,7 +875,7 @@ void HandlerALRM(int sig)
     }
     w->logoutOK();
   }
-    //sleep(1);
+
 
 
   alarm(1);

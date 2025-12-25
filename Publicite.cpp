@@ -77,7 +77,7 @@ int main()
       perror("Erreur msgrcv\n");
       exit(0);
     }
-    printf("m.expediteur %d\n", autreM.expediteur);
+  
     if((fd = open("publicites.dat", O_RDONLY))==-1)
     {
         perror("Erreur fichier");
@@ -103,9 +103,9 @@ int main()
       lseek(fd, 0, SEEK_SET);
     }
     // Ecriture en mémoire partagée
-    printf("je lu %s   \t %d\n", pub.texte, pub.nbSecondes);
+   
     strcpy(pShm, pub.texte);
-    printf("mem partager Serveur=> %s\n", pShm);
+
     // Envoi d'une requete UPDATE_PUB au serveur
     m.type=1;
     m.expediteur= getpid();
@@ -128,5 +128,5 @@ int main()
 }
 void HandlerSIGINT(int sig)
 {
-  
+  exit(1);
 }

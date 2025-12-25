@@ -99,7 +99,7 @@ int main()
       perror("Erreur Creation Semaphore\n");
       exit(1);
     }
-    printf("Semid=> %d\n", idSem);
+    //printf("Semid=> %d\n", idSem);
 
     arg.val=1;
     if(semctl(idSem, 0, SETVAL, arg)==-1)
@@ -133,21 +133,21 @@ int main()
       perror("erreur shmget");
       exit(0);
     }
-    printf("idshm=> %d\n", idSem);
+    //printf("idshm=> %d\n", idSem);
 
     if((pShm = (char*)shmat(idShm, NULL,0))==(char*)-1)
     {
       perror("Erreur de shmat");
       exit(1);
     }
-    printf("pShm %p\n",pShm);
+    //printf("pShm %p\n",pShm);
     if((idfils=fork()) == -1)
     {
       perror("Erreur fork\n");
       exit(0);
     }
 
-    printf("idfils %d\n", idfils);
+    //printf("idfils %d\n", idfils);
     if(idfils==0)
     {
       if(execlp("Publicite","Publicite", NULL)==-1)
@@ -157,7 +157,7 @@ int main()
       }
     
     }
-    printf("mem partager Serveur=> %s\n", pShm);
+   // printf("mem partager Serveur=> %s\n", pShm);
 
     while(1)
     {
@@ -405,7 +405,7 @@ void HandlerSIGINT(int sig)
     perror("Erreur de semctl (3)");
     exit(1);
   }
-  //kill(tab->pidPublicite, SIGINT);
+  
 
 }
 
@@ -544,11 +544,6 @@ void NewUser(MESSAGE m)
           mysql_query(connexion, requete);
       }
 
-      /*reponse.expediteur=getpid();
-      reponse.type=m.expediteur;
-      reponse.requete=NEW_USER;
-      strcpy(reponse.data1, "KO");
-      strcpy(reponse.texte, "utilisateur n'a pas été trouver");*/
     }
   }
 
